@@ -1,0 +1,183 @@
+EASY QUESTIONS
+~Question 1: Write a query that calculates the difference between the highest salaries found in the marketing and engineering departments. 
+Output just the absolute difference in salaries.
+
+data tables: db_employee (which includes salary, department_id) and db_dept (which includes id and department name)
+
+ANSWER:
+select abs(max(salary) filter (where department = 'marketing') - max(salary) filter (where department = 'engineering'))
+from db_employee emp
+left join db_dept dept
+on emp.department_id = dept.id;
+
+
+~Question 2: Find the average number of beds in each neighborhood that has at least 3 beds in total.
+Output results along with the neighborhood name and sort the results based on the number of average beds in descending order.
+
+data tables: airbnb_search_details
+
+ANSWER:
+SELECT neighborhood, avg(beds) as 'avg_beds'
+FROM airbnb search_details
+GROUP BY neighbourhood
+HAVING SUM(beds) >= 3
+ORDER BY avg(beds) DESC;
+
+~Question 3: Meta/Facebook has developed a new programing language called Hack.To measure the popularity of Hack they ran a survey with their employees. The survey included data on previous programing familiarity as well as the number of years of experience, age, gender and most importantly satisfaction with Hack. Due to an error location data was not collected, but your supervisor demands a report showing average popularity of Hack by office location. Luckily the user IDs of employees completing the surveys were stored.
+Based on the above, find the average popularity of the Hack per office location.
+Output the location along with the average popularity.
+
+data tables: facebook_employees, facebook_hack_survey
+
+ANSWER:
+SELECT AVG(popularity), location
+FROM facebook_employees emp
+LEFT JOIN facebook_hack_survey survey
+ON emp.id = survey.employee_id
+GROUP BY location;
+
+~Question 4: Find order details made by Jill and Eva. Consider the Jill and Eva as first names of customers.
+Output the order date, details and cost along with the first name. Order records based on the customer id in ascending order.
+
+data tables: customers, orders
+
+ANSWER: 
+SELECT first_name, order_date as date, order_details as details, total_order_cost as total_cost
+FROM customers c
+LEFT JOIN orders o
+ON c.id = o.cust_id
+WHERE first_name = 'Jill'
+OR first_name = 'Eva'
+ORDER BY cust_id;
+
+~Question 5: Compare each employee's salary with the average salary of the corresponding department.
+Output the department, first name, and salary of employees along with the average salary of that department.
+
+data tables: employee
+
+ANSWER: unsure why but naming the avg(salary) is not possible 
+SELECT department, first_name, salary, 
+    AVG(salary) OVER (PARTITION BY department)
+FROM employee;
+
+~Question 6: We have a table with employees and their salaries, however, some of the records are old and contain outdated salary information. 
+Find the current salary of each employee assuming that salaries increase each year. 
+Output their id, first name, last name, department ID, and current salary. Order your list by employee ID in ascending order.
+
+data tables: ms_employee_salary
+
+ANSWER: apparently aliasing 
+SELECT id, first_name, last_name, department_id, max(salary) AS current_salary
+FROM ms_employee_salary
+GROUP BY id, first_name, last_name, department_id
+ORDER BY id;
+
+~Question 7: Find the details of each customer regardless of whether the customer made an order. 
+Output the customer's first name, last name, and the city along with the order details.
+You may have duplicate rows in your results due to a customer ordering several of the same items. 
+Sort records based on the customer's first name and the order details in ascending order.
+
+data tables: customers, orders
+
+ANSWER:
+SELECT first_name, last_name, city, order_details 
+FROM customers c
+LEFT JOIN orders o
+ON c.id = o.cust_id
+ORDER BY first_name, order_details;
+
+
+INTERMEDIATE QUESTIONS
+~Question 8: Find the highest target achieved by the employee or employees who works under the manager id 13. 
+Output the first name of the employee and target achieved. 
+The solution should show the highest target achieved under manager_id=13 and which employee(s) achieved it.
+
+data tables: salesforce_employees
+
+ANSWER:
+-- Filter manager_id = 13
+-- only output MAX target first_names
+-- subquery to find max(target) value for manager_id = 13
+
+select target, first_name, manager_id
+from salesforce_employees
+WHERE manager_id = 13
+AND target = 
+(
+select max(target)
+from salesforce_employees
+where manager_id = 13);
+
+~Question 9: What is the overall friend acceptance rate by date? Your output should have the rate of acceptances by the date the request was sent. 
+Order by the earliest date to latest. Assume that each friend request starts by a user sending (i.e., user_id_sender) a friend request to another user 
+(i.e., user_id_receiver) that's logged in the table with action = 'sent'. If the request is accepted, the table logs action = 'accepted'. 
+If the request is not accepted, no record of action = 'accepted' is logged.
+
+dataset: fb_friend_requests
+
+-- Action= accepted/count(actions) Group by date
+-- Order by date desc
+-- create two tables to retrieve two counts
+ANSWER:
+SELECT a.date, COUNT(b.user_id_receiver)/COUNT(a.user_id_sender)::decimal AS rate_of_acceptance
+FROM
+(
+SELECT date, user_id_sender, user_id_receiver
+FROM fb_friend_requests
+WHERE action = 'sent') a
+LEFT JOIN
+(
+SELECT date, user_id_sender, user_id_receiver
+FROM fb_friend_requests
+WHERE action = 'accepted') b
+ON a.user_id_sender = b.user_id_sender 
+AND a.user_id_receiver = b.user_id_receiver
+GROUP BY a.date
+ORDER BY a.date desc;
+
+~Question 10: For each guest reviewer, find the nationality of the reviewer's favorite host based on the guest's highest review score given to that host.
+Output the user ID of the guest along witht heir favorite host's nationality. In case there is more than one favorite host from the same country,
+list that country only once (remove duplicates). Both the 'from_user' and 'to_user' columns are user IDs. 
+
+Tables: airbnb_reviews, airbnb_hosts
+
+ANSWER:
+-- first we choose the different columns we need: from_user, review_score, nationality
+-- since nationality is in the airbnb_hosts while the rest of the info is in airbnb_reviews, we join them first while removing duplicates
+-- using host_id and to_user as the key column and specify the from_user to be 'guest' 
+SELECT from_user, nationality, review_score
+FROM airbnb reviews a
+LEFT JOIN (
+SELECT host_id, max(nationality) AS nationality FROM airbnb_hosts GROUP BY host_id) b
+ON a.to_user = b.host_id
+WHERE from_type = 'guest'
+
+-- Next since we want to know the max review score from the table we created we can use a window function to create a new column showing that
+-- the "MAX(review_score) OVER (PARTITION BY from_user) as max_review_score" creates a column showing the highest review score in the review score column
+-- without disturbing our previously made table
+SELECT from_user, nationality, review_score,
+  MAX(review_score) OVER (PARTITION BY from_user) as max_review_score
+FROM airbnb reviews a
+LEFT JOIN (
+SELECT host_id, max(nationality) AS nationality FROM airbnb_hosts GROUP BY host_id) b
+ON a.to_user = b.host_id
+WHERE from_type = 'guest'
+
+-- Finally, we need to only submit the from_user's id along with their favorite hosts' nationality which means we take only want to return
+-- the highest score along with the details of the question, so in one line of code we can use the WITH clause to apply aggregation
+-- on an already aggregated data table and run more queries on it
+FINAL ANSWER:
+WITH temp_table as (
+SELECT from_user, nationality, review_score,
+  MAX(review_score) OVER (PARTITION BY from_user) as max_review_score
+FROM airbnb reviews a
+LEFT JOIN (
+SELECT host_id, max(nationality) AS nationality FROM airbnb_hosts GROUP BY host_id) b
+ON a.to_user = b.host_id
+WHERE from_type = 'guest'
+)
+SELECT from_user, nationality
+FROM temp_table
+-- to take only the highest score of each from_user that is a guest
+WHERE review_score = max_review_score
+GROUP BY from_user, nationality;
