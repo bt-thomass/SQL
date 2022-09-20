@@ -1,0 +1,166 @@
+SQL Review
+
+DATA TYPES
+  Text Types: Used to store text, can even store numbers as text
+  - CHAR
+  - VARCHAR (numbers that are treated like characters such as zip codes)
+  - TEXT
+  Numerical Types: Used to Store Numbers
+  - INTEGER
+  - FLOAT (0s in front)
+  - REAL
+  - NUMERIC
+  - BOOL
+  - BOOLEAN (True or False)
+
+
+// Basic Querying //
+SELECT *
+FROM dataset_1;
+
+SELECT destination, passanger 
+FROM dataset_1
+LIMIT 10;
+
+SELECT DISTINCT passanger
+FROM dataset_1;
+
+SELECT *
+FROM dataset_1
+WHERE passanger = 'Alone'
+AND destination = 'Home'
+AND weather = 'Sunny';
+
+-- ORDER BY, ASC and DESC
+SELECT *
+FROM dataset_1
+WHERE passanger = 'Alone'
+OR time = '2PM'
+ORDER BY time ASC;
+
+-- This is to comment surrounding coding script but not code
+SELECT *
+FROM dataset_1
+WHERE passanger = 'Partner'
+OR destination = 'No Urgent Place'
+ORDER BY time DESC;
+
+
+// Query Aggregation //
+SELECT destination, AVG(temperature)
+FROM dataset_1 d 
+GROUP BY destination;
+	-- This shows us each average temperature of all the different destinations
+
+SELECT destination, SUM(temperature)
+FROM dataset_1 d 
+GROUP BY destination;
+	-- Shows the total of all the temperatures in each destination
+
+SELECT destination, COUNT(temperature)
+FROM dataset_1 d 
+GROUP BY destination;
+	-- Showing how many rows of temperature there are or basically the amount of data rows in each destination
+
+-- THESE ARE THE DIFFERENT AGGREGATIONS THAT ARE POSSIBLE
+SELECT destination, time,
+	AVG(temperature), 
+	SUM(temperature), 
+	COUNT(temperature), 
+	COUNT(DISTINCT temperature),
+	MIN(temperature),
+	MAX(temperature),
+FROM dataset_1 d 
+WHERE time <> '10PM'
+GROUP BY destination, time
+ORDER BY time;
+
+-- on top of that there is also the 'HAVING' clause
+SELECT occupation, destination, temperature 
+FROM dataset_1 d 
+GROUP BY occupation 
+HAVING occupation = 'Student';
+
+-- QUESTION REVIEW "We want to know the details of the most used trips that non-university(<21) students take to go home" --
+-- #1 look at the dataset_1 where occupation is something to do with Student
+SELECT *
+FROM dataset_1
+WHERE occupation LIKE 'Stud%';
+
+-- #2 we know the variables we want to look at so we show top 3 most taken trips
+SELECT destination, passanger, weather, occupation, time, age, count(temperature) as 'Number of Trips'
+FROM dataset_1 d 
+WHERE occupation = 'Student' 
+AND destination = 'Home'
+GROUP BY age, time, weather 
+HAVING age = 'below21'
+ORDER BY count(temperature) DESC
+LIMIT 3;
+
+
+// JOINING and UNIONING //
+Joins and Unions
+- When add more data from other data sets to current datasets we use Joining or Unioning
+  - Unions:
+  Put simply, a union (SQL Union) is the process of stacking two tables on top of one another
+  You will usually do this when your data is split up into multiple sections like an excel spreadsheet of a year’s sales split by month.
+  - Joins:
+  Joins combine two tables horizontally. 
+  For a join, like a Union you have to have at least two tables, what we call our Left Table and our Right Table. 
+  You (mostly) have to have at least one matching column between the two tables, and you will match rows from these columns. 
+  The most common way to visualize the types of Joins are through Venn Diagrams.
+  
+-- Bring TabletoUnion into dataset_1 
+SELECT *
+FROM dataset_1 d 
+UNION
+SELECT *
+FROM table_to_union;
+
+-- Check how it works by comparing dataset_1 to a subquery of the union
+SELECT DISTINCT destination
+FROM dataset_1 d;
+
+-- Difference between Union ALL and Union is that Union ALL disregards duplication while Union doesn't allow it
+SELECT DISTINCT destination
+FROM 
+(
+SELECT *
+FROM dataset_1 d 
+UNION ALL
+SELECT *
+FROM table_to_union);
+
+-- Bring TabletoJoin into dataset_1
+SELECT *
+FROM table_to_join ttj;
+-- Note that part_of_day is not apart of the actual datatable
+-- Using aliasing allows to specify what to find from which table
+SELECT destination, d.time, ttj.part_of_day
+FROM dataset_1 d
+LEFT JOIN table_to_join ttj 
+ON d.time = ttj.time
+-- then using WHERE, LIKE and '%%' allows us to filter even further
+WHERE d.time LIKE '%P%';
+
+
+//UNIQUE CLAUSES//
+-- BETWEEN
+SELECT DISTINCT temperature
+FROM dataset_1
+WHERE temperature BETWEEN 29 AND 75;
+
+-- IN (shows all the information for the WHERE clause for all stated variables
+SELECT *
+FROM dataset_1
+WHERE occupation IN ('Sales & Related', 'Management');
+
+-- OVER and PARTITION BY (it aggregates in the background but not by anything else
+SELECT destination, weather, 
+	AVG(temperature) OVER (PARTITION BY weather) AS 'avg_temp_by_weather'
+FROM dataset_1;
+  
+  rather than looking too aggregated of a field of vision like this query
+SELECT destination, weather, AVG(temperature) AS 'avg_temp'
+FROM dataset_1
+GROUP BY weather;
