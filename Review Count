@@ -1,0 +1,5 @@
+SELECT Policies.PRODUCT, Policies.CUSTOMER_NAME, Count(Transactions_Active_Enrollments.CONTRACT_NUM) AS CountOfCONTRACT_NUM, Count(Transactions_Active_Asset_Premium.ASSET_ID) AS CountOfASSET_ID, Policies.POL_NUM
+FROM Policies INNER JOIN (Transactions_Active_Enrollments RIGHT JOIN Transactions_Active_Asset_Premium ON (Transactions_Active_Enrollments.POL_NUM = Transactions_Active_Asset_Premium.POL_NUM) AND (Transactions_Active_Enrollments.ENROLL_TRAN = Transactions_Active_Asset_Premium.ENROLL_TRAN) AND (Transactions_Active_Enrollments.CONTRACT_ID = Transactions_Active_Asset_Premium.CONTRACT_ID) AND (Transactions_Active_Enrollments.CONTRACT_NUM = Transactions_Active_Asset_Premium.CONTRACT_NUM)) ON Policies.POL_NUM = Transactions_Active_Asset_Premium.POL_NUM
+GROUP BY Policies.PRODUCT, Policies.CUSTOMER_NAME, Policies.POL_NUM
+HAVING (((Policies.PRODUCT)=3610))
+ORDER BY Count(Transactions_Active_Asset_Premium.ASSET_ID) DESC , Policies.POL_NUM
